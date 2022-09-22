@@ -1,0 +1,10 @@
+# ignoring node_modules
+node_modules/
+
+# ignoring .env files for protection
+.env
+
+DS_STORE
+
+
+
