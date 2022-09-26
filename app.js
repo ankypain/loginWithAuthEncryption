@@ -12,6 +12,7 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
@@ -51,6 +52,22 @@ passport.use(User.createStrategy());
 //session to be intialized and deinitialized for particular users
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
+//google OAuth
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.CLIENT_ID,
+      clientSecret: process.env.SECRET,
+      callbackURL: "http://localhost:3000/auth/google/secrets",
+      userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+    },
+    function (accessToken, refreshToken, profile, cb) {
+      User.findOrCreate({ googleId: profile.id }, function (err, user) {
+        return cb(err, user);
+      });
+    }
+  )
+);
 
 //first local route towards home
 app.get("/", function (req, res) {
@@ -90,14 +107,32 @@ app.route("/secrets").get(function (req, res) {
   }
 });
 
+//login route
 app
   .route("/login")
   .get(function (req, res) {
     res.render("login");
   })
-  .post(function (req, res) {});
+  .post(function (req, res) {
+    const user = new User({
+      username: req.body.username,
+      password: req.body.password,
+    });
 
+    req.login(user, function (err) {
+      if (err) {
+        res.redirect("/login");
+      } else {
+        passport.authenticate("local")(req, res, function () {
+          res.redirect("/secrets");
+        });
+      }
+    });
+  });
+
+//logout route and deleting the session
 app.route("/logout").get(function (req, res) {
+  req.logout();
   res.render("home");
 });
 
