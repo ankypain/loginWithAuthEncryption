@@ -28,10 +28,13 @@ app.use(
 
 //initialized passport to be used in our app
 app.use(passport.initialize());
-//we ask passport to take charge of our sessions
+//we used passport to handle the sessions
 app.use(passport.session());
 
+//using local mongoose for mongoDB server
 mongoose.connect("mongodb://localhost:27017/userDB");
+
+//creating user schema through mongoose
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
@@ -40,6 +43,7 @@ const userSchema = new mongoose.Schema({
 //we used passport local mongoose as a plugin for our schema
 userSchema.plugin(passportLocalMongoose);
 
+//creating a user object through mongoose model using our schema
 const User = new mongoose.model("User", userSchema);
 
 //passport used to create a local login strategy
@@ -48,15 +52,18 @@ passport.use(User.createStrategy());
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
+//first local route towards home
 app.get("/", function (req, res) {
   res.render("home");
 });
 
+//register route
 app
   .route("/register")
   .get(function (req, res) {
     res.render("register");
   })
+  //authenticating the user through passport
   .post(function (req, res) {
     User.register(
       { username: req.body.username },
@@ -74,6 +81,7 @@ app
     );
   });
 
+//only allowing users who are authenticated to secrets page
 app.route("/secrets").get(function (req, res) {
   if (req.isAuthenticated()) {
     res.render("secrets");
